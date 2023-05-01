@@ -1,42 +1,35 @@
 import React, { useCallback, useRef, useState } from 'react'
-import { GoogleMap, useJsApiLoader,Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { useEffect } from 'react';
-import { countries,states,cities } from './json';
+import { countries, states, cities } from './json';
 const containerStyle = {
   width: '90vw',
   height: '90vh',
-  position:'absolute',
-  top:'50%',
-  left:'50%',
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
   transform: 'translate(-50%,-50%)'
 };
 
-// const center = {
-//   lat: 28.5516782, 
-//   lng: 77.0679478
-// };
 
-let prevCity =[]
+let selectedMarker = {country:'',state:'',city:''}
 const App = () => {
   const mapRef = useRef(null);
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: "AIzaSyBX1z5nvjcjzyxSMT-QCVS3ERu6Y3iNSb0",
-    language:"en",
-      region:"EN",
-      version:"weekly"
+    language: "en",
+    region: "EN",
+    version: "weekly"
   })
 
   const [map, setMap] = useState(null);
-  const [info,setInfo] = useState(false);
-  const [prevCity,setPrevCity] = useState([])
-  const [marker,setMarker]=useState({
-    markerFor:'country',
-    data:countries,
-    center:{lat:20,lng:77},
-    zoom:4
-  })
- // const [position, setPosition] = useState({lat: 28.578614351842646, lng: 77.19344598889874})
+  const [info, setInfo] = useState(false);
+  const [prevCity, setPrevCity] = useState([])
+  const [prevDate, setprevDate] = useState({country:null,state:null,city:null})
+  const [selectMarker, setSelectMarker] = useState(null)
+  const [markerSelected,setMarkerSelected] = useState(selectedMarker)
+  const [marker, setMarker] = useState({markerFor: 'country',data: countries,center: { lat: 20, lng: 77 },zoom: 4})
 
   const onLoad = useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds(marker.center);
@@ -49,124 +42,159 @@ const App = () => {
   function handleCenter() {
     if (!mapRef.current) return;
     const newPos = mapRef.current.getCenter().toJSON();
-  //  setPosition(newPos);
+    //  setPosition(newPos);
   }
 
   const onUnmount = useCallback(function callback(map) {
     setMap(null)
   }, [])
 
-  const arrangeMarkerData =(markerData,markerTo,name)=>{
-    let data =[];
-    markerData.forEach(el=>{
-      if(markerTo !== 'city'){
-        if(el.name.toUpperCase() == name.toUpperCase()){
+  const arrangeMarkerData = (markerData, markerTo, name, iscityFilter) => {
+    let dataObj = {}, data = [], prevRec = [];
+    markerData.forEach(el => {
+      if (markerTo !== 'city') {
+        if (el.name.toUpperCase() == name.toUpperCase()) {
           data.push(el)
+          if (iscityFilter) {
+            prevRec.push(el)
+          }
         }
-      }else{
-        if(el.state.toUpperCase() == name.toUpperCase()){
+      } else {
+        if (el.state.toUpperCase() == name.toUpperCase()) {
           data.push(el)
+          prevRec.push(el)
         }
       }
     })
-    data.forEach(el=>{
-      if(el.name.toUpperCase() == 'INDIA'){
-        states.forEach(state=>{
+    data.forEach(el => {
+      if (el.name.toUpperCase() == 'INDIA') {
+        states.forEach(state => {
           data.push(state)
+          prevRec.push(el)
         })
       }
     })
-    return data
+    prevDate[markerTo]=prevRec;
+    return { data, prevRec }
   }
-  const markerClickHandler =(markerFor,name)=>{
-    let markerData =[],markerTo='',zoom=5,prevCity =[];
-    if(markerFor == 'country'){
+  const markerClickHandler = (markerFor, dataEle) => {
+    let markerData = [], markerTo = '', zoom = 5, prevCity = [], iscityFilter = false;
+    let name = dataEle.name;
+    if (markerFor == 'country') {
       markerData = countries
+     // selectedMarker.country = dataEle.name
+      iscityFilter = false
       markerTo = 'state'
-      zoom=7
-    }else if(markerFor == 'state'){
+      zoom = 5
+    } else if (markerFor == 'state') {
       markerData = cities
+     // selectedMarker.country = dataEle.name
       markerTo = 'city'
-      zoom=10
-    }else{
+      iscityFilter = true
+      zoom = 7
+    } else {
       markerData = cities
-      markerTo='town'
-      zoom=11
+      markerTo = 'town'
+      iscityFilter = false
+      zoom = 10
     }
-    let data = arrangeMarkerData(markerData,markerTo,name)
-    setPrevCity(data)
-    setMarker({markerFor:markerTo,data:data,center:{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lng)},zoom:zoom})
+    markerSelected[markerFor] = dataEle.name
+    //console.log(markerSelected)
+    let data = arrangeMarkerData(markerData, markerTo, name, iscityFilter)
+    iscityFilter && setPrevCity(data.prevRec)
+    setMarkerSelected(markerSelected)
+    setMarker({ markerFor: markerTo, data: data.data, center: { lat: parseFloat(dataEle.lat), lng: parseFloat(dataEle.lng) }, zoom: zoom })
   }
-  const showTitle=()=>{
+  const showTitle = () => {
     setInfo(true)
   }
-  const hideTitle=()=>{
+  const hideTitle = () => {
     setInfo(false)
   }
-  const changeHandler =(e)=>{
-    e.preventDefault();
-    let markerData =[],markerTo='',zoom=0;
-    if(e.target.name =='back'){
-      if(marker.markerFor == 'town'){
-        markerData = prevCity
-        markerTo = 'city'
-        zoom = 5
-      }else if(marker.markerFor == 'city'){
-        markerData = states
-        markerTo = 'state'
-        zoom = 5
-      }else if(marker.markerFor == 'state'){
-        markerData =countries
-        markerTo = 'country'
-        zoom = 4
-      }
+  const changeHandler = (name) => {
+    let markerData = [], markerTo = '', zoom = 0;
+    console.log(name);
+    if(!name){
+     // marker.markerFor=name
+    if (marker.markerFor == 'town') {
+      markerData = prevCity
+      markerTo = 'city'
+      zoom = 5
+    } else if (marker.markerFor == 'city') {
+      markerData = states
+      markerTo = 'state'
+      zoom = 5
+    } else if (marker.markerFor == 'state') {
+      markerData = countries
+      markerTo = 'country'
+      zoom = 4
     }
-    setMarker({markerFor:markerTo,data:markerData,center:{lat:parseFloat(markerData[0].lat),lng:parseFloat(markerData[0].lng)},zoom:zoom})
+  }else{
+      if(name == 'state'){
+      markerSelected.city=''
+      zoom = 5
+      markerData = prevDate.city
+    }else if(name == 'country'){
+      markerData = prevDate.state
+      zoom = 4
+      markerSelected.city=markerSelected.state=''
+    }else if(name == 'countries'){
+      markerData = countries
+      markerTo='country'
+      zoom = 5
+      prevDate.city=prevDate.country=prevDate.state=null
+      markerSelected.city=markerSelected.state=markerSelected.country=''
+    }
+  }
+    setMarkerSelected(markerSelected)
+    setprevDate(prevDate)
+    if (markerData && markerData.length) {
+      setMarker({ markerFor: markerTo, data: markerData, center: { lat: parseFloat(markerData[0].lat), lng: parseFloat(markerData[0].lng) }, zoom: zoom })
+    }
   }
 
   return isLoaded ? (
     <>
       <div className="mapCenter">
-        <div className="buttons" style={{position:'absolute',left:'10%',top:'10%',zIndex:1}}>
-          <input type="button" name='back' onClick={changeHandler}/>
+        <div className="buttons">
+          <i className="fa-solid fa-arrow-left" onClick={()=>changeHandler()}></i>
+          {/* <input type="button" name='back' /> */}
+          <div className='breadcrum'><span onClick={()=>changeHandler('countries')}>All Country</span>
+          {markerSelected?.country &&<><span> / </span> <span onClick={()=>changeHandler('country')}>{markerSelected?.country}</span></>}
+          { markerSelected?.state && <><span> / </span><span onClick={()=>changeHandler('state')}>{markerSelected?.state}</span></>}
+          {markerSelected?.city && <><span> / </span><span onClick={()=>changeHandler('city')}>{markerSelected?.city}</span></>}
+          {markerSelected?.town && <><span> / </span><span onClick={()=>changeHandler('town')}>{markerSelected?.town}</span></>}
+          </div>
         </div>
-      <GoogleMap 
-        id='map'
-        defaultZoom={marker.zoom}
-        de={marker.zoom}
-        mapContainerStyle={containerStyle} 
-        onLoad={onLoad} 
-        onUnmount={onUnmount} 
-        onDragEnd={handleCenter}
-        center={marker.center} 
+        <GoogleMap
+          id='map'
+          zoom={marker.zoom}
+          mapContainerStyle={containerStyle}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          onDragEnd={handleCenter}
+          center={marker.center}
         >
-          {marker.data.map(el=>(
-            <Marker 
-              position={{lat: parseFloat(el.lat),lng:parseFloat(el.lng)}} 
-              onMouseOver={()=>showTitle(el.name)}
-              onMouseOut={()=>hideTitle()}
-              onClick={()=>markerClickHandler(marker.markerFor,el.name)}
-              // onLoad={onLoad}
-              >
-                  {/* {!info && 
-                    <InfoWindow>
-                        <p>{el.name}</p>
-                    </InfoWindow>
-                  }  */}
-                {/* <InfoWindow
-                     pixelOffset={"0"}
-                     marker={"HELLO"}
-                     visible={true}>
-                       <div>
-                            <h1>{"HELLO"}</h1>
-                       </div>
-                </InfoWindow> */}
-              </Marker>
+          {marker.data.map(el => (
+            <Marker
+              position={{ lat: parseFloat(el.lat), lng: parseFloat(el.lng) }}
+              onMouseOver={() => showTitle(el.name)}
+              onMouseOut={() => hideTitle()}
+              onDblClick={() => markerClickHandler(marker.markerFor, el)}
+              onClick={() => setSelectMarker(el)}
+            // onLoad={onLoad}
+            />
           ))}
-        <></>
-      </GoogleMap>
+          {/* {selectMarker &&
+            <div style={{position:'absolute',top:'10'}}>
+              <InfoWindow styles={{color:'red'}} maxWidth='50px' position={{ lat: selectMarker.lat, lng: selectMarker.lng }} onCloseClick={() => setSelectMarker(null)}>
+                <p>{selectMarker.name}</p>
+              </InfoWindow>
+            </div>
+          } */}
+        </GoogleMap>
       </div>
-      </>
+    </>
   ) : <></>
 }
 export default App
