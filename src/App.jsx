@@ -37,9 +37,10 @@ const App = () => {
 
   const onLoad = useCallback(function callback(map) {
     const bounds = new window.google.maps.LatLngBounds(marker.center);
+    marker.data.forEach(({lat,lng})=> bounds.extend({lat,lng}))
     mapRef.current = map;
-    map.fitBounds(bounds);
-    // map.setZoom(5);
+    //map.fitBounds(bounds);
+    map.setZoom(4);
     setMap(map)
   }, [])
 
@@ -158,86 +159,88 @@ const App = () => {
   }
 
   return isLoaded ? <>
-      <div className="container">
+    <div className="container">
       <div className="userContainer">
-          <div className="section">
-            <div className="sectionNav">
+        <div className="section">
+          <div className="sectionNav">
 
-            </div>
-            <div className="sectionIcon">
-              <div className="img">
-                <img className='userImg' src="/img/user.png" alt="User" />
-              </div>
-            </div>
-            <div className="sectionInput">
-              <form action="">
-                <div className="userName">
-                  <label htmlFor="UserName">User</label>
-                  <input type="text" name='user' placeholder='UserId' />
-                </div>
-                <div className="userPass">
-                  <label htmlFor="password">Password</label>
-                  <input type="password" placeholder='********' />
-                </div>
-                <div className="userBtn">
-                  <div className="btnSection">
-                    <input type="submit" value={'Login'} />
-                  </div>
-                  <div className="btnSign">
-                    <div>
-                      <span>Register Here</span>
-                    </div>
-                  </div>
-                </div>
-              </form>
+          </div>
+          <div className="sectionIcon">
+            <div className="img">
+              <img className='userImg' src="/img/user.png" alt="User" />
             </div>
           </div>
-        </div>
-        <div className="mapContainer">
-
-          <div className="mapCenter">
-            <div className="buttons">
-              <i className="fa-solid fa-arrow-left" onClick={() => changeHandler()}></i>
-              <div className='breadcrum'><span onClick={() => changeHandler('countries')}>All Country</span>
-                {markerSelected?.country && <><span> / </span> <span onClick={() => changeHandler('country')}>{markerSelected?.country}</span></>}
-                {markerSelected?.state && <><span> / </span><span onClick={() => changeHandler('state')}>{markerSelected?.state}</span></>}
-                {markerSelected?.city && <><span> / </span><span onClick={() => changeHandler('city')}>{markerSelected?.city}</span></>}
-                {markerSelected?.town && <><span> / </span><span onClick={() => changeHandler('town')}>{markerSelected?.town}</span></>}
+          <div className="sectionInput">
+            <form action="">
+              <div className="userName">
+                <label htmlFor="UserName">User</label>
+                <input type="text" name='user' placeholder='UserId' />
               </div>
-            </div>
-            <GoogleMap
-              id='map'
-              zoom={marker.zoom}
-              mapContainerStyle={containerStyle}
-              onLoad={onLoad}
-              onUnmount={onUnmount}
-              onDragEnd={handleCenter}
-              center={marker.center}
-              onClick={(e) => alert({ e })}
-            >
-              {marker.data.map(el => (
-                <Marker
-                  position={{ lat: parseFloat(el.lat), lng: parseFloat(el.lng) }}
-                  onMouseOver={() => showTitle(el.name)}
-                  onMouseOut={() => hideTitle()}
-                  onDblClick={() => markerClickHandler(marker.markerFor, el)}
-                  onClick={() => setSelectMarker(el)}
-                // onLoad={onLoad}
-                />
-              ))}
-              {/* {selectMarker &&
-            <div style={{position:'absolute',top:'10'}}>
-              <InfoWindow styles={{color:'red'}} maxWidth='50px' position={{ lat: selectMarker.lat, lng: selectMarker.lng }} onCloseClick={() => setSelectMarker(null)}>
-                <p>{selectMarker.name}</p>
-              </InfoWindow>
-            </div>
-          } */}
-            </GoogleMap>
+              <div className="userPass">
+                <label htmlFor="password">Password</label>
+                <input type="password" placeholder='********' />
+              </div>
+              <div className="userBtn">
+                <div className="btnSection">
+                  <input type="submit" value={'Login'} />
+                </div>
+                <div className="btnSign">
+                  <div>
+                    <span>Register Here</span>
+                  </div>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       </div>
+      <div className="mapContainer">
 
-    </>
-  : <></>
+        <div className="mapCenter">
+          <div className="buttons">
+            <i className="fa-solid fa-arrow-left" onClick={() => changeHandler()}></i>
+            <div className='breadcrum'><span onClick={() => changeHandler('countries')}>All Country</span>
+              {markerSelected?.country && <><span> / </span> <span onClick={() => changeHandler('country')}>{markerSelected?.country}</span></>}
+              {markerSelected?.state && <><span> / </span><span onClick={() => changeHandler('state')}>{markerSelected?.state}</span></>}
+              {markerSelected?.city && <><span> / </span><span onClick={() => changeHandler('city')}>{markerSelected?.city}</span></>}
+              {markerSelected?.town && <><span> / </span><span onClick={() => changeHandler('town')}>{markerSelected?.town}</span></>}
+            </div>
+          </div>
+          <GoogleMap
+            id='map'
+            zoom={marker.zoom}
+            mapContainerStyle={containerStyle}
+            onLoad={onLoad}
+            onUnmount={onUnmount}
+            onDragEnd={handleCenter}
+            center={marker.center}
+            onClick={(e) => alert({ e })}
+          >
+            {marker.data.map((el,idx) => (
+              <Marker
+                key={idx}
+                position={{ lat: parseFloat(el.lat), lng: parseFloat(el.lng) }}
+                onMouseOver={() => showTitle(el.name)}
+                onMouseOut={() => hideTitle()}
+                onDblClick={() => markerClickHandler(marker.markerFor, el)}
+                onClick={() => setSelectMarker(idx)}
+              // onLoad={onLoad}
+              >
+                {selectMarker === idx &&
+                    <InfoWindow onCloseClick={() => setSelectMarker(null)}>
+                      <p>{el.name}</p>
+                    </InfoWindow>
+                }
+              </Marker>
+
+            ))}
+
+          </GoogleMap>
+        </div>
+      </div>
+    </div>
+
+  </>
+    : <></>
 }
 export default App
